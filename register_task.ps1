@@ -13,15 +13,24 @@ $action = New-ScheduledTaskAction `
 
 $trigger = New-ScheduledTaskTrigger `
     -Once -At (Get-Date) `
-    -RepetitionInterval (New-TimeSpan -Minutes 30) `
-    -RepetitionDuration ([TimeSpan]::MaxValue)
+    -RepetitionInterval (New-TimeSpan -Minutes 30)
+# Leaving Repetition.Duration unset (rather than [TimeSpan]::MaxValue, which
+# Register-ScheduledTask fails to serialize -- "P99999999DT23H59M59S" is out
+# of the accepted XML duration range) means "repeat every 30 min, no end".
+$trigger.Repetition.Duration = ""
+$trigger.Repetition.StopAtDurationEnd = $false
 
 $settings = New-ScheduledTaskSettingsSet `
     -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
-    -Settings $settings -Description "Checks Princes Gardens tennis court availability every 30 min." `
-    -Force
+try {
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
+        -Settings $settings -Description "Checks Princes Gardens tennis court availability every 30 min." `
+        -Force -ErrorAction Stop | Out-Null
+} catch {
+    Write-Error "Failed to register scheduled task: $_"
+    exit 1
+}
 
 Write-Host "Registered scheduled task '$taskName'. It will run every 30 minutes."
 Write-Host "View/manage it with: Get-ScheduledTask -TaskName $taskName"
