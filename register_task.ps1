@@ -17,7 +17,7 @@ $trigger = New-ScheduledTaskTrigger `
     -RepetitionDuration ([TimeSpan]::MaxValue)
 
 $settings = New-ScheduledTaskSettingsSet `
-    -AllowStartIfOnBattery -DontStopIfGoingOnBatteries -StartWhenAvailable
+    -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
     -Settings $settings -Description "Checks Princes Gardens tennis court availability every 30 min." `
