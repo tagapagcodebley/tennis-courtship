@@ -1,0 +1,6 @@
+secrets.ps1
+state.json
+watcher.log
+__pycache__/
+*.pyc
+.venv/
