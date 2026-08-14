@@ -54,7 +54,11 @@ LOG_FILE = SCRIPT_DIR / "watcher.log"
 
 EMAIL_FROM = os.environ.get("TENNIS_GMAIL_USER")
 EMAIL_APP_PASSWORD = os.environ.get("TENNIS_GMAIL_APP_PASSWORD")
-EMAIL_TO = os.environ.get("TENNIS_NOTIFY_TO", "bjsesquivel@gmail.com")
+EMAIL_TO = [
+    addr.strip()
+    for addr in os.environ.get("TENNIS_NOTIFY_TO", "bjsesquivel@gmail.com").split(",")
+    if addr.strip()
+]
 
 HEADERS = {
     "User-Agent": (
@@ -228,11 +232,11 @@ def send_email(new_slots: list[OpenSlot], all_slots: list[OpenSlot]) -> None:
     msg = MIMEText(body)
     msg["Subject"] = f"Tennis court opening: {len(new_slots)} new slot(s)"
     msg["From"] = EMAIL_FROM
-    msg["To"] = EMAIL_TO
+    msg["To"] = ", ".join(EMAIL_TO)
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(EMAIL_FROM, EMAIL_APP_PASSWORD)
-        server.sendmail(EMAIL_FROM, [EMAIL_TO], msg.as_string())
+        server.sendmail(EMAIL_FROM, EMAIL_TO, msg.as_string())
 
 
 # ----------------------------------------------------------------------
@@ -273,7 +277,7 @@ def main() -> int:
             log(f"  NEW: {slot.day} {slot.court} {slot.start_str()}-{slot.end_str()}")
         try:
             send_email(new_slots, open_slots)
-            log(f"Notification email sent to {EMAIL_TO}.")
+            log(f"Notification email sent to {', '.join(EMAIL_TO)}.")
         except Exception as exc:
             log(f"ERROR sending email: {exc}")
             return 1
