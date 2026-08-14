@@ -3,4 +3,4 @@
 
 $env:TENNIS_GMAIL_USER = "your.gmail.address@gmail.com"
 $env:TENNIS_GMAIL_APP_PASSWORD = "xxxxxxxxxxxxxxxx"   # 16-char Gmail App Password, no spaces
-$env:TENNIS_NOTIFY_TO = "bjsesquivel@gmail.com"
+$env:TENNIS_NOTIFY_TO = "example@gmail.com"
