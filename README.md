@@ -35,7 +35,7 @@ Looks 2 weeks ahead. Edit `DESIRED_WINDOWS`, `MIN_DURATION_MINUTES`, or
 3. Copy `secrets.example.ps1` to `secrets.ps1` and fill in:
    - `TENNIS_GMAIL_USER` — the Gmail address sending the alert
    - `TENNIS_GMAIL_APP_PASSWORD` — the app password from step 2
-   - `TENNIS_NOTIFY_TO` — where alerts go (defaults to bjsesquivel@gmail.com)
+   - `TENNIS_NOTIFY_TO` — where alerts go
 
    `secrets.ps1` stays local — don't share or commit it.
 
