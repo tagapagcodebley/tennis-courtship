@@ -7,8 +7,8 @@ $scriptDir = $PSScriptRoot
 $taskName = "TennisCourtWatcher"
 
 $action = New-ScheduledTaskAction `
-    -Execute "powershell.exe" `
-    -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptDir\run_watcher.ps1`"" `
+    -Execute "wscript.exe" `
+    -Argument "`"$scriptDir\run_hidden.vbs`"" `
     -WorkingDirectory $scriptDir
 
 $trigger = New-ScheduledTaskTrigger `
