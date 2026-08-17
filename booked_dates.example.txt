@@ -1,0 +1,8 @@
+# One date per line, YYYY-MM-DD. Lines starting with # are ignored.
+# Copy this file to booked_dates.txt and list any day you already have a
+# court booked on (there or elsewhere) -- the watcher will skip that day
+# and the day after when looking for new openings.
+#
+# Example:
+# 2026-08-22
+# 2026-08-29

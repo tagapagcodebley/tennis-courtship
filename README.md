@@ -57,6 +57,21 @@ Looks 2 weeks ahead. Edit `DESIRED_WINDOWS`, `MIN_DURATION_MINUTES`, or
    .\register_task.ps1
    ```
 
+## Optional: skip days you've already booked
+
+Copy `booked_dates.example.txt` to `booked_dates.txt` and list any day you
+already have a court booked on (one `YYYY-MM-DD` per line, `#` for comments).
+The watcher skips that day and the day after when looking for new openings.
+This is manually maintained — there's no way to auto-detect your bookings
+without you being logged in, and cookie-based auth for a background task
+turned out not to be worth the upkeep (session cookies expire often).
+
+`booked_dates.txt` isn't committed (see `.gitignore`) since it's personal
+schedule data that changes constantly.
+
+Change how many days after a booking get skipped via
+`SKIP_DAYS_AFTER_EXISTING_BOOKING` in `watch_courts.py` (default: 1).
+
 ## Managing the scheduled task
 
 ```powershell

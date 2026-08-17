@@ -51,6 +51,11 @@ DESIRED_WINDOWS: dict[int, list[tuple[str, str]]] = {
 SCRIPT_DIR = Path(__file__).resolve().parent
 STATE_FILE = SCRIPT_DIR / "state.json"
 LOG_FILE = SCRIPT_DIR / "watcher.log"
+BOOKED_DATES_FILE = SCRIPT_DIR / "booked_dates.txt"
+
+# If you already have a booking on a given day (per booked_dates.txt), also
+# skip this many following days (1 = skip the booked day and the day after).
+SKIP_DAYS_AFTER_EXISTING_BOOKING = 1
 
 EMAIL_FROM = os.environ.get("TENNIS_GMAIL_USER")
 EMAIL_APP_PASSWORD = os.environ.get("TENNIS_GMAIL_APP_PASSWORD")
@@ -129,10 +134,14 @@ BOOKABLE_CATEGORY = 0  # Sessions with this category are open/unbooked slots
                         # Category 1000 ("Booking") means someone already booked it.
 
 
-def find_open_slots(data: dict, now: datetime) -> list[OpenSlot]:
+def find_open_slots(
+    data: dict, now: datetime, excluded_dates: set[date] = frozenset()
+) -> list[OpenSlot]:
     """Sessions with Category 0 are the open, unbooked slots. We merge
     adjacent ones into contiguous free ranges, intersect with the
     desired windows for that weekday, and keep ones long enough to book.
+    Days in excluded_dates (e.g. days you already have a booking on, per
+    booked_dates.txt) are skipped entirely.
     """
     open_slots: list[OpenSlot] = []
 
@@ -140,6 +149,8 @@ def find_open_slots(data: dict, now: datetime) -> list[OpenSlot]:
         court_name = resource["Name"]
         for day_entry in resource["Days"]:
             day = datetime.fromisoformat(day_entry["Date"]).date()
+            if day in excluded_dates:
+                continue
             windows = DESIRED_WINDOWS.get(day.weekday())
             if not windows:
                 continue
@@ -197,6 +208,24 @@ def load_state() -> set[str]:
 
 def save_state(keys: set[str]) -> None:
     STATE_FILE.write_text(json.dumps(sorted(keys), indent=2))
+
+
+def load_booked_dates() -> set[date]:
+    """Reads booked_dates.txt: one YYYY-MM-DD per line, blank lines and
+    lines starting with # ignored. Missing file just means no bookings."""
+    if not BOOKED_DATES_FILE.exists():
+        return set()
+
+    booked_dates = set()
+    for lineno, line in enumerate(BOOKED_DATES_FILE.read_text().splitlines(), start=1):
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        try:
+            booked_dates.add(date.fromisoformat(line))
+        except ValueError:
+            log(f"WARNING: skipping unparseable line {lineno} in booked_dates.txt: {line!r}")
+    return booked_dates
 
 
 # ----------------------------------------------------------------------
@@ -262,7 +291,16 @@ def main() -> int:
         log(f"ERROR fetching sessions: {exc}")
         return 1
 
-    open_slots = find_open_slots(data, now)
+    booked_dates = load_booked_dates()
+    excluded_dates: set[date] = set()
+    for booked_day in booked_dates:
+        for offset in range(SKIP_DAYS_AFTER_EXISTING_BOOKING + 1):
+            excluded_dates.add(booked_day + timedelta(days=offset))
+    if booked_dates:
+        log(f"Booked on {sorted(d.isoformat() for d in booked_dates)}; "
+            f"excluding those day(s) + {SKIP_DAYS_AFTER_EXISTING_BOOKING} after.")
+
+    open_slots = find_open_slots(data, now, excluded_dates)
     current_keys = {slot.key for slot in open_slots}
 
     previous_keys = load_state()
