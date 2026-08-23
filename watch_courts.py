@@ -52,6 +52,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 STATE_FILE = SCRIPT_DIR / "state.json"
 LOG_FILE = SCRIPT_DIR / "watcher.log"
 BOOKED_DATES_FILE = SCRIPT_DIR / "booked_dates.txt"
+MAX_LOG_BYTES = 100 * 1024  # trim watcher.log to this size, dropping oldest lines
 
 # If you already have a booking on a given day (per booked_dates.txt), also
 # skip this many following days (1 = skip the booked day and the day after).
@@ -280,7 +281,29 @@ def log(message: str) -> None:
         f.write(line + "\n")
 
 
+def trim_log_file() -> None:
+    """Drops the oldest lines from watcher.log if it's grown past
+    MAX_LOG_BYTES. Runs once at the start of each invocation, so the file
+    only ever gets meaningfully over the cap by about one run's worth of
+    lines before the next run trims it back down."""
+    if not LOG_FILE.exists():
+        return
+    data = LOG_FILE.read_bytes()
+    if len(data) <= MAX_LOG_BYTES:
+        return
+
+    lines = data.decode("utf-8", errors="replace").splitlines(keepends=True)
+    kept_bytes = sum(len(line.encode("utf-8")) for line in lines)
+    first_kept = 0
+    while kept_bytes > MAX_LOG_BYTES and first_kept < len(lines):
+        kept_bytes -= len(lines[first_kept].encode("utf-8"))
+        first_kept += 1
+
+    LOG_FILE.write_text("".join(lines[first_kept:]), encoding="utf-8")
+
+
 def main() -> int:
+    trim_log_file()
     now = datetime.now(TIMEZONE)
     today = now.date()
     end = today + timedelta(weeks=WEEKS_AHEAD)
@@ -291,7 +314,10 @@ def main() -> int:
         log(f"ERROR fetching sessions: {exc}")
         return 1
 
-    booked_dates = load_booked_dates()
+    booked_dates = {
+        d for d in load_booked_dates()
+        if d + timedelta(days=SKIP_DAYS_AFTER_EXISTING_BOOKING) >= today
+    }
     excluded_dates: set[date] = set()
     for booked_day in booked_dates:
         for offset in range(SKIP_DAYS_AFTER_EXISTING_BOOKING + 1):
